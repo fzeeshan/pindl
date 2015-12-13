@@ -260,7 +260,9 @@ def download_all_my_boards(access_token):
         return
 
     for board in boards:
-        download_board(urllib.parse.urlsplit(board['url']).path.strip('/'))
+        download_board(
+            urllib.parse.urlsplit(board['url']).path.strip('/'),
+            access_token)
 
 
 def parse_args():
