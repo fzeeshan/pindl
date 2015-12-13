@@ -309,6 +309,7 @@ def main():
     if args.access_token:
         access_token = args.access_token
     else:
+        access_token = ''
         for file_name in (
                 _TOKEN_FILE,
                 os.path.join(
