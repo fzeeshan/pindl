@@ -196,7 +196,7 @@ def download_board(board, access_token):
         num_pins
         ))
 
-    if board_info['id'] == board:
+    if board == board_info['id']:
         board = urllib.parse.unquote(
             urllib.parse.urlsplit(board_info['url']).path.strip('/'))
     path = board.replace('/', os.sep)
