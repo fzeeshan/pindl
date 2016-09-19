@@ -110,12 +110,12 @@ def get_text(url):
         return read_response(response).decode()
 
 
-def create_pin_filename(pin, image_ext=''):
+def create_pin_filename(pin, image_ext):
     '''Create a file name for the pin image.
 
     pin -- a pin info from the API response. "id" and "note" fields
         are required.
-    image_ext -- custom image extension (with a leading period).
+    image_ext -- image extension with a leading period.
     '''
     if not pin['note']:
         return pin['id'] + image_ext
