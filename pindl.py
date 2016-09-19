@@ -132,7 +132,7 @@ def create_pin_filename(pin, image_ext=''):
     if note:
         note += '_'
 
-    return '{}{}{}'.format(note, pin['id'], image_ext)
+    return note + pin['id'] + image_ext
 
 
 def get_existing_pins(path):
