@@ -174,7 +174,7 @@ def iter_pins(board, access_token):
             break
 
 
-def download_board(board, access_token):
+def download_board(board, access_token, out_dir):
     '''Download all pins from the board.
 
     board -- a board id or user_name/board_name combination.
@@ -199,7 +199,7 @@ def download_board(board, access_token):
     if board == board_info['id']:
         board = urllib.parse.unquote(
             urllib.parse.urlsplit(board_info['url']).path.strip('/'))
-    path = board.replace('/', os.sep)
+    path = os.path.join(out_dir, board.replace('/', os.sep))
     os.makedirs(path, exist_ok=True)
 
     existing_pins = get_existing_pins(path)
@@ -246,7 +246,7 @@ def download_board(board, access_token):
             f.write(image_data)
 
 
-def download_all_my_boards(access_token):
+def download_all_my_boards(access_token, out_dir):
     '''Download all boards of the authenticated user.'''
     query = urllib.parse.urlencode({
         'access_token': access_token,
@@ -263,7 +263,8 @@ def download_all_my_boards(access_token):
         download_board(
             urllib.parse.unquote(
                 urllib.parse.urlsplit(board['url']).path.strip('/')),
-            access_token)
+            access_token,
+            out_dir)
 
 
 def parse_args():
@@ -288,6 +289,11 @@ def parse_args():
     parser.add_argument(
         '-a', '--access-token', metavar='TOKEN',
         help='Access token to use instead of saved in the file.')
+    parser.add_argument(
+        '-o', '--out-dir', metavar='DIR', default='.',
+        help=(
+            'Directory to save images in. '
+            'Default is the current working directory.'))
     parser.add_argument(
         '-d', '--debug', action='store_const',
         dest='loglevel', const=logging.DEBUG,
@@ -347,11 +353,11 @@ def main():
     for board in boards:
         try:
             if board == 'all':
-                download_all_my_boards(access_token)
+                download_all_my_boards(access_token, args.out_dir)
             else:
                 board = urllib.parse.unquote(
                     urllib.parse.urlsplit(board).path.strip('/'))
-                download_board(board, access_token)
+                download_board(board, access_token, args.out_dir)
         except URLError as e:
             logging.error('%s: %s', board, e)
 
