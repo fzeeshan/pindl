@@ -26,6 +26,7 @@ import itertools
 import os
 import sys
 import imghdr
+import textwrap
 
 from http import cookiejar
 import urllib.request
@@ -271,7 +272,25 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='Pinterest board downloader',
         usage='%(prog)s [OPTIONS] BOARD [BOARD..]',
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=textwrap.dedent('''
+            Before using pindl, visit
+            https://developers.pinterest.com/tools/access_token/
+            to generate an access token. "read_public" will be enough.
+
+            Pindl will search for your access token in the following places
+            (in order of priority):
+              * -a, --access-token argument
+              * pin_token file in the current working directory
+              * pin_token file in the same directory as pindl.py
+              * .pin_token file in your home directory
+
+            On Windows, don\'t forget to enable UTF-8 in your command prompt
+            before using pindl:
+              chcp 65001
+            Or set PYTHONIOENCODING environment variable instead:
+              set PYTHONIOENCODING=UTF-8
+            '''))
 
     parser.add_argument(
         '-v', '--version', action='version', version='%(prog)s 1.0.1')
