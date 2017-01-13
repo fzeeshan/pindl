@@ -27,6 +27,7 @@ import os
 import sys
 import imghdr
 import textwrap
+import concurrent.futures
 
 from http import cookiejar
 import urllib.request
@@ -43,6 +44,8 @@ _TOKEN_FILE = 'pin_token'
 
 # Maximum length of the pin note (description).
 _NOTE_LIMIT = 50
+
+_PINS_PER_PAGE = 100  # The maximum is 100
 
 
 _FILENAME_TRANS = str.maketrans('\\/"', '--\'', '<>:|?*')
@@ -152,39 +155,95 @@ def get_existing_pins(path):
     return pins
 
 
-def iter_pins(board, access_token):
-    '''Iterate over all pins on the board.
+def iter_board_pages(board, access_token, page_cursor=None):
+    '''Iterate over pages of a board.
 
     board -- a board id or user_name/board_name combination.
+    page_cursor -- the cursor to the next page to download, or None to
+        start from the first page.
+
+    Yields a list of pins on the current page and the cursor to
+    the next page (will be None for the last page).
     '''
-    query = urllib.parse.urlencode({
+    query = {
         'access_token': access_token,
         'fields': 'id,note,image',
-        'limit': '100',
-        })
-    url = '{}boards/{}/pins/?{}'.format(API, urllib.parse.quote(board), query)
+        'limit': _PINS_PER_PAGE,
+        }
+    if page_cursor:
+        query['cursor'] = page_cursor
+
+    url = '{}boards/{}/pins/?{}'.format(
+        API, urllib.parse.quote(board), urllib.parse.urlencode(query))
 
     while True:
         board = json.loads(get_text(url))
 
-        for pin in board['data']:
-            yield pin
+        yield board['data'], board['page']['cursor']
 
         url = board['page']['next']
         if url is None:
             break
 
 
-def download_board(board, access_token, out_dir):
+def download_pin(pin, path):
+    image_url = pin['image']['original']['url']
+    with urllib.request.urlopen(image_url) as response:
+        image_data = response.read()
+
+    image_ext = os.path.splitext(image_url)[1]
+
+    # Sometimes non-JPEG images have .jpg extension.
+    if image_ext == '.jpg':
+        image_type = imghdr.what(None, image_data)
+        if image_type not in (None, 'jpeg'):
+            image_ext = '.' + image_type
+            logging.debug(
+                '%s image extension corrected', image_type.upper())
+
+    image_name = create_pin_filename(pin, image_ext)
+    image_path = os.path.join(path, image_name)
+
+    with open(image_path, 'wb') as f:
+        f.write(image_data)
+
+
+def create_progress_printer(num_pins):
+    '''Create a progress printer.
+
+    num_pins -- the total number of pins.
+
+    Returns a callable that takes a pin and its current number.
+    '''
+    total_width = 79
+
+    num_width = len(str(num_pins))
+    num_field_width = num_width * 2 + 1  # Plus the length of the slash
+    num_spaces = 2
+    free_width = max(0, total_width - num_field_width - num_spaces)
+
+    template = '{{:{}}}/{} {}'.format(num_width, num_pins, '{:{}} {:{}}')
+
+    def printer(pin, pin_num):
+        id_len = len(pin['id'])
+        note_len = max(0, free_width - id_len)
+        note = limit_string(pin['note'], note_len)
+        print(template.format(pin_num, note, note_len, pin['id'], id_len))
+
+    return printer
+
+
+def download_board(board, access_token, out_dir, num_threads):
     '''Download all pins from the board.
 
     board -- a board id or user_name/board_name combination.
     '''
-    query = urllib.parse.urlencode({
+    query = {
         'access_token': access_token,
         'fields': 'id,name,url,creator,counts'
-        })
-    url = '{}boards/{}/?{}'.format(API, urllib.parse.quote(board), query)
+        }
+    url = '{}boards/{}/?{}'.format(
+        API, urllib.parse.quote(board), urllib.parse.urlencode(query))
 
     board_info = json.loads(get_text(url))['data']
 
@@ -203,57 +262,99 @@ def download_board(board, access_token, out_dir):
     path = os.path.join(out_dir, board.replace('/', os.sep))
     os.makedirs(path, exist_ok=True)
 
+    page_info_path = path + '.json'
+    try:
+        with open(page_info_path, 'r', encoding='utf-8') as f:
+            page_info = json.load(f)
+    except FileNotFoundError:
+        page_info = {}
+
+    page_num = page_info.get('num_complete_pages', 0)
+    pin_num = page_num * _PINS_PER_PAGE
+
     existing_pins = get_existing_pins(path)
+    print_progress = create_progress_printer(num_pins)
 
-    for pin_num, pin in enumerate(iter_pins(board, access_token), 1):
-        if pin['id'] in existing_pins:
-            old_file_name = existing_pins[pin['id']]
-            new_file_name = create_pin_filename(
-                pin, os.path.splitext(old_file_name)[1])
+    for pins, cursor in iter_board_pages(
+            board, access_token, page_info.get('next_page_cursor')):
+        page_num += 1
+        logging.debug('Page: %s', page_num)
+        logging.debug('Next page cursor: %s', cursor)
 
-            if new_file_name == old_file_name:
-                logging.info(
-                    'Pin %s already exists as:\n  %s',
-                    pin['id'], old_file_name)
-                continue
+        new_pins = []
+        for pin in pins:
+            if pin['id'] not in existing_pins:
+                new_pins.append(pin)
+            else:
+                old_file_name = existing_pins[pin['id']]
+                new_file_name = create_pin_filename(
+                    pin, os.path.splitext(old_file_name)[1])
 
-            os.rename(
-                os.path.join(path, old_file_name),
-                os.path.join(path, new_file_name))
-            logging.info(
-                'Pin %s file name updated:\n  Old: %s\n  New: %s',
-                pin['id'], old_file_name, new_file_name)
-            continue
+                if new_file_name == old_file_name:
+                    logging.info(
+                        'Pin %s already exists as:\n  %s',
+                        pin['id'], old_file_name)
+                else:
+                    os.rename(
+                        os.path.join(path, old_file_name),
+                        os.path.join(path, new_file_name))
+                    logging.info(
+                        'Pin %s file name updated:\n  Old: %s\n  New: %s',
+                        pin['id'], old_file_name, new_file_name)
 
-        image_url = pin['image']['original']['url']
-        with urllib.request.urlopen(image_url) as response:
-            image_data = response.read()
+        pin_num += len(pins) - len(new_pins)
+        logging.debug('%s new pins on this page', len(new_pins))
 
-        image_ext = os.path.splitext(image_url)[1]
+        if new_pins:
+            num_errors = 0
+            with concurrent.futures.ThreadPoolExecutor(
+                    num_threads) as executor:
+                future_to_pin = {}
+                for pin in new_pins:
+                    future = executor.submit(download_pin, pin, path)
+                    future_to_pin[future] = pin
 
-        # Sometimes non-JPEG images have .jpg extension.
-        if image_ext == '.jpg':
-            image_type = imghdr.what(None, image_data)
-            if image_type not in (None, 'jpeg'):
-                image_ext = '.' + image_type
-                logging.debug(
-                    '%s image extension corrected', image_type.upper())
+                for future in concurrent.futures.as_completed(future_to_pin):
+                    # Print the exception before the progress message so that
+                    # it will appear together with debugging messages.
+                    e = future.exception()
+                    if e is not None:
+                        logging.error(e)
+                        num_errors += 1
 
-        image_name = create_pin_filename(pin, image_ext)
-        image_path = os.path.join(path, image_name)
-        print('{}/{} {}'.format(pin_num, num_pins, image_name))
+                    pin_num += 1
+                    pin = future_to_pin[future]
+                    print_progress(pin, pin_num)
 
-        with open(image_path, 'wb') as f:
-            f.write(image_data)
+            if num_errors > 0:
+                logging.error(
+                    'The page was not downloaded completely: '
+                    '%s pins left to download. Please try again later.',
+                    num_errors,)
+                return
+
+        if cursor is not None:
+            page_info = {
+                'next_page_cursor': cursor,
+                'num_complete_pages': page_num
+            }
+            with open(page_info_path, 'w', encoding='utf-8') as f:
+                json.dump(page_info, f, ensure_ascii=False, indent=2)
+        else:
+            # This is the last page
+            try:
+                os.remove(page_info_path)
+            except FileNotFoundError:
+                pass
 
 
-def download_all_my_boards(access_token, out_dir):
+def download_all_my_boards(access_token, out_dir, num_threads):
     '''Download all boards of the authenticated user.'''
-    query = urllib.parse.urlencode({
+    query = {
         'access_token': access_token,
         'fields': 'id,url'
-        })
-    url = '{}me/boards/?{}'.format(API, query)
+        }
+    url = '{}me/boards/?{}'.format(API, urllib.parse.urlencode(query))
 
     boards = json.loads(get_text(url))['data']
     if not boards:
@@ -265,7 +366,8 @@ def download_all_my_boards(access_token, out_dir):
             urllib.parse.unquote(
                 urllib.parse.urlsplit(board['url']).path.strip('/')),
             access_token,
-            out_dir)
+            out_dir,
+            num_threads)
 
 
 def parse_args():
@@ -314,6 +416,9 @@ def parse_args():
             'Directory to save images in. '
             'Default is the current working directory.'))
     parser.add_argument(
+        '-t', '--threads', type=int, default=10,
+        help='Number of downloading threads. Default is 10.')
+    parser.add_argument(
         '-d', '--debug', action='store_const',
         dest='loglevel', const=logging.DEBUG,
         help='Print debugging info.')
@@ -321,6 +426,9 @@ def parse_args():
     args = parser.parse_args()
     if not args.batch_file and not args.boards:
         parser.error('You must provide at least one board.')
+
+    if args.threads < 1:
+        parser.error('The number of threads should be >= 1')
 
     return args
 
@@ -372,11 +480,12 @@ def main():
     for board in boards:
         try:
             if board == 'all':
-                download_all_my_boards(access_token, args.out_dir)
+                download_all_my_boards(
+                    access_token, args.out_dir, args.threads)
             else:
                 board = urllib.parse.unquote(
                     urllib.parse.urlsplit(board).path.strip('/'))
-                download_board(board, access_token, args.out_dir)
+                download_board(board, access_token, args.out_dir, args.threads)
         except URLError as e:
             logging.error('%s: %s', board, e)
 
