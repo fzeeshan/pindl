@@ -2,7 +2,7 @@
 
 # Pinterest board downloader
 #
-# Copyright (c) 2015, 2016 Daniel Plakhotich
+# Copyright (c) 2015-2017 Daniel Plakhotich
 #
 # This software is provided 'as-is', without any express or implied
 # warranty. In no event will the authors be held liable for any damages
