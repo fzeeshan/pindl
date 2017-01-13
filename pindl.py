@@ -121,14 +121,15 @@ def create_pin_filename(pin, image_ext):
         are required.
     image_ext -- image extension with a leading period.
     '''
-    if not pin['note']:
+    note = pin['note'].lstrip('.')
+    if not note:
         return pin['id'] + image_ext
 
     # Limit the note length.
     # The maximum length of a path component is 255 bytes (minus 1 byte
     # of the underscore). Assume that both id and extension are ASCII-only.
     note = limit_string_bytes(
-        pin['note'], 254 - len(pin['id']) - len(image_ext))
+        note, 254 - len(pin['id']) - len(image_ext))
     note = limit_string(note, _NOTE_LIMIT)
 
     note = universal_filename(note)
