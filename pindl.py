@@ -64,9 +64,24 @@ def limit_string(s, length):
     return (s[:length - 1] + '…') if len(s) > length else s
 
 
+_ELLIPSIS_BYTE_LEN = len('…'.encode())
+
+
 def limit_string_bytes(s, byte_length):
-    '''Limit string to the given number of bytes.'''
-    return s.encode()[:byte_length].decode(errors='ignore')
+    '''Limit string to the given number of bytes.
+
+    Ellipsis appended if needed.
+    '''
+    encoded = s.encode()
+    if len(encoded) <= byte_length:
+        return s
+    elif byte_length < _ELLIPSIS_BYTE_LEN:
+        return ''
+    elif byte_length == _ELLIPSIS_BYTE_LEN:
+        return '…'
+    else:
+        byte_length -= _ELLIPSIS_BYTE_LEN
+        return encoded[:byte_length].decode(errors='ignore') + '…'
 
 
 def setup_opener():
@@ -125,12 +140,11 @@ def create_pin_filename(pin, image_ext):
     if not note:
         return pin['id'] + image_ext
 
-    # Limit the note length.
+    note = limit_string(note, _NOTE_LIMIT)
     # The maximum length of a path component is 255 bytes (minus 1 byte
     # of the underscore). Assume that both id and extension are ASCII-only.
     note = limit_string_bytes(
         note, 254 - len(pin['id']) - len(image_ext))
-    note = limit_string(note, _NOTE_LIMIT)
 
     note = universal_filename(note)
     note = '_'.join(note.lower().split())
