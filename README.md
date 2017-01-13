@@ -46,7 +46,8 @@ can download up to 100,000 images per hour. The actual number depends
 on how many board you download and how many pins each one contains:
 the program makes an additional API call for each board to retrieve its
 information (the total number of pins, author's name, etc.), and an
-extra call for "all" to get a list of your public boards.
+extra call for "all" to get a list of your public boards. Enabling
+`-d, --debug` option will allow you to see the current rate limit.
 
 To keep track of downloaded pages, pindl saves the cursor to the next
 page and the number of downloaded pages in a
