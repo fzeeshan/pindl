@@ -42,7 +42,7 @@ API = 'https://api.pinterest.com/v1/'
 # File containing an access token.
 _TOKEN_FILE = 'pin_token'
 
-# Maximum length of the pin note (description).
+# Maximum length of the pin note (description) to be used in image name.
 _NOTE_LIMIT = 50
 
 _PINS_PER_PAGE = 100  # The maximum is 100
