@@ -61,7 +61,7 @@ def limit_string(s, length):
 
     Ellipsis appended if needed.
     '''
-    return (s[:length - 1].rstrip() + '…') if len(s) > length else s
+    return (s[:length - 1] + '…') if len(s) > length else s
 
 
 def limit_string_bytes(s, byte_length):
