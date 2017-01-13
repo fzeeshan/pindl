@@ -121,12 +121,16 @@ def read_response(response):
     return decompressed_data
 
 
-def get_text(url):
+def api_call(url):
     request = urllib.request.Request(
         url, headers={'Accept-Encoding': 'gzip, deflate'})
 
     with urllib.request.urlopen(request) as response:
-        return read_response(response).decode()
+        logging.debug(
+            'Rate limit: %s/%s',
+            response.getheader('X-Ratelimit-Remaining'),
+            response.getheader('X-Ratelimit-Limit'))
+        return json.loads(read_response(response).decode())
 
 
 def create_pin_filename(pin, image_ext):
@@ -192,7 +196,7 @@ def iter_board_pages(board, access_token, page_cursor=None):
         API, urllib.parse.quote(board), urllib.parse.urlencode(query))
 
     while True:
-        board = json.loads(get_text(url))
+        board = api_call(url)
 
         yield board['data'], board['page']['cursor']
 
@@ -260,7 +264,7 @@ def download_board(board, access_token, out_dir, num_threads):
     url = '{}boards/{}/?{}'.format(
         API, urllib.parse.quote(board), urllib.parse.urlencode(query))
 
-    board_info = json.loads(get_text(url))['data']
+    board_info = api_call(url)['data']
 
     num_pins = board_info['counts']['pins']
     creator = board_info['creator']
@@ -371,7 +375,7 @@ def download_all_my_boards(access_token, out_dir, num_threads):
         }
     url = '{}me/boards/?{}'.format(API, urllib.parse.urlencode(query))
 
-    boards = json.loads(get_text(url))['data']
+    boards = api_call(url)['data']
     if not boards:
         print('You have no public boards')
         return
