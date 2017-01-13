@@ -52,15 +52,15 @@ _FILENAME_TRANS = str.maketrans('\\/"', '--\'', '<>:|?*')
 
 
 def universal_filename(s):
-    '''Create a file name compatible with MS file systems.'''
+    """Create a file name compatible with MS file systems."""
     return s.translate(_FILENAME_TRANS).rstrip('. ')
 
 
 def limit_string(s, length):
-    '''Limit string to the given length.
+    """Limit string to the given length.
 
     Ellipsis appended if needed.
-    '''
+    """
     return (s[:length - 1] + '…') if len(s) > length else s
 
 
@@ -68,10 +68,10 @@ _ELLIPSIS_BYTE_LEN = len('…'.encode())
 
 
 def limit_string_bytes(s, byte_length):
-    '''Limit string to the given number of bytes.
+    """Limit string to the given number of bytes.
 
     Ellipsis appended if needed.
-    '''
+    """
     encoded = s.encode()
     if len(encoded) <= byte_length:
         return s
@@ -101,10 +101,10 @@ def setup_opener():
 
 
 def read_response(response):
-    '''Read data from the response.
+    """Read data from the response.
 
     The function will take care of compression, if any.
-    '''
+    """
     data = response.read()
 
     encoding = response.getheader('Content-Encoding')
@@ -134,12 +134,12 @@ def api_call(url):
 
 
 def create_pin_filename(pin, image_ext):
-    '''Create a file name for the pin image.
+    """Create a file name for the pin image.
 
     pin -- a pin info from the API response. "id" and "note" fields
         are required.
     image_ext -- image extension with a leading period.
-    '''
+    """
     note = pin['note'].lstrip('.')
     if not note:
         return pin['id'] + image_ext
@@ -159,10 +159,10 @@ def create_pin_filename(pin, image_ext):
 
 
 def get_existing_pins(path):
-    '''Get a list of pins in the path.
+    """Get a list of pins in the path.
 
     Returns a dict {pin_id: file_name}.
-    '''
+    """
     pins = {}
 
     for file_name in next(os.walk(path))[2]:
@@ -175,7 +175,7 @@ def get_existing_pins(path):
 
 
 def iter_board_pages(board, access_token, page_cursor=None):
-    '''Iterate over pages of a board.
+    """Iterate over pages of a board.
 
     board -- a board id or user_name/board_name combination.
     page_cursor -- the cursor to the next page to download, or None to
@@ -183,7 +183,7 @@ def iter_board_pages(board, access_token, page_cursor=None):
 
     Yields a list of pins on the current page and the cursor to
     the next page (will be None for the last page).
-    '''
+    """
     query = {
         'access_token': access_token,
         'fields': 'id,note,image',
@@ -228,12 +228,12 @@ def download_pin(pin, path):
 
 
 def create_progress_printer(num_pins):
-    '''Create a progress printer.
+    """Create a progress printer.
 
     num_pins -- the total number of pins.
 
     Returns a callable that takes a pin and its current number.
-    '''
+    """
     total_width = 79
 
     num_width = len(str(num_pins))
@@ -253,10 +253,10 @@ def create_progress_printer(num_pins):
 
 
 def download_board(board, access_token, out_dir, num_threads):
-    '''Download all pins from the board.
+    """Download all pins from the board.
 
     board -- a board id or user_name/board_name combination.
-    '''
+    """
     query = {
         'access_token': access_token,
         'fields': 'id,name,url,creator,counts'
@@ -368,7 +368,7 @@ def download_board(board, access_token, out_dir, num_threads):
 
 
 def download_all_my_boards(access_token, out_dir, num_threads):
-    '''Download all boards of the authenticated user.'''
+    """Download all boards of the authenticated user."""
     query = {
         'access_token': access_token,
         'fields': 'id,url'
@@ -394,7 +394,7 @@ def parse_args():
         description='Pinterest board downloader',
         usage='%(prog)s [OPTIONS] BOARD [BOARD..]',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=textwrap.dedent('''
+        epilog=textwrap.dedent("""
             Before using pindl, visit
             https://developers.pinterest.com/tools/access_token/
             to generate an access token. "read_public" will be enough.
@@ -411,7 +411,7 @@ def parse_args():
               chcp 65001
             Or set PYTHONIOENCODING environment variable instead:
               set PYTHONIOENCODING=UTF-8
-            '''))
+            """))
 
     parser.add_argument(
         '-v', '--version', action='version', version='%(prog)s 1.0.1')
