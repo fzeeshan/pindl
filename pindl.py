@@ -349,7 +349,7 @@ def download_board(board, access_token, out_dir, num_threads):
                 logging.error(
                     'The page was not downloaded completely: '
                     '%s pins left to download. Please try again later.',
-                    num_errors,)
+                    num_errors)
                 return
 
         if cursor is not None:
