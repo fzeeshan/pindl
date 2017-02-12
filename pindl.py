@@ -37,6 +37,9 @@ import zlib
 import json
 
 
+VERSION = '1.0.1'
+
+
 API = 'https://api.pinterest.com/v1/'
 
 # File containing an access token.
@@ -414,7 +417,7 @@ def parse_args():
             """))
 
     parser.add_argument(
-        '-v', '--version', action='version', version='%(prog)s 1.0.1')
+        '-v', '--version', action='version', version='%(prog)s ' + VERSION)
 
     parser.add_argument(
         'boards', nargs=argparse.REMAINDER,
