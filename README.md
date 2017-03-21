@@ -72,7 +72,8 @@ For more information, visit [the API documentation][API]:
 * As of 12.2015, the Pinterest API does not provide access to secret
   boards, so you need to make them temporarily public to download.
 
-* On Windows, don't forget to set UTF-8 in your command prompt:
+* On Windows, don't forget to set UTF-8 in your command prompt if your
+  Python is older than 3.6.0:
 
         chcp 65001
 
