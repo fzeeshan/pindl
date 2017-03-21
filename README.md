@@ -63,8 +63,8 @@ to download, there is no cursor for the first page.
 
 For more information, visit [the API documentation][API]:
 
-* [Rate limiting] (https://developers.pinterest.com/docs/api/overview/#rate-limiting)
-* [Pagination] (https://developers.pinterest.com/docs/api/overview/#pagination)
+* [Rate limiting](https://developers.pinterest.com/docs/api/overview/#rate-limiting)
+* [Pagination](https://developers.pinterest.com/docs/api/overview/#pagination)
 
 
 ## Usage notes
