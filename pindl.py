@@ -223,7 +223,9 @@ def download_pin(pin, path):
         image_url = base + '.png'
         with urllib.request.urlopen(image_url) as response:
             image_data = response.read()
-        logging.debug('URL extension corrected from %s to .png', ext)
+        logging.debug(
+            'Pin %s URL extension corrected from %s to .png',
+            pin['id'], ext)
 
     image_ext = os.path.splitext(image_url)[1]
 
@@ -233,7 +235,8 @@ def download_pin(pin, path):
         if image_type not in (None, 'jpeg'):
             image_ext = '.' + image_type
             logging.debug(
-                '%s image extension corrected', image_type.upper())
+                'Pin %s %s image extension corrected',
+                pin['id'], image_type.upper())
 
     image_name = create_pin_filename(pin, image_ext)
     image_path = os.path.join(path, image_name)
