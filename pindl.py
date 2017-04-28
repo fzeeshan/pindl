@@ -228,7 +228,7 @@ def download_pin(pin, path):
     image_ext = os.path.splitext(image_url)[1]
 
     # Sometimes non-JPEG images have .jpg extension.
-    if image_ext == '.jpg':
+    if image_ext in ('.jpg', '.jpeg'):
         image_type = imghdr.what(None, image_data)
         if image_type not in (None, 'jpeg'):
             image_ext = '.' + image_type
