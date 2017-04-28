@@ -337,16 +337,14 @@ def download_board(board, access_token, out_dir, num_threads):
                     future_to_pin[future] = pin
 
                 for future in concurrent.futures.as_completed(future_to_pin):
-                    # Print the exception before the progress message so that
-                    # it will appear together with debugging messages.
+                    pin_num += 1
+                    pin = future_to_pin[future]
+                    print_progress(pin, pin_num)
+
                     e = future.exception()
                     if e is not None:
                         logging.error(e)
                         num_errors += 1
-
-                    pin_num += 1
-                    pin = future_to_pin[future]
-                    print_progress(pin, pin_num)
 
             if num_errors > 0:
                 logging.error(
