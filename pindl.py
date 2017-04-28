@@ -32,7 +32,7 @@ import concurrent.futures
 from http import cookiejar
 import urllib.request
 import urllib.parse
-from urllib.error import URLError
+from urllib.error import URLError, HTTPError
 import zlib
 import json
 
@@ -328,7 +328,6 @@ def download_board(board, access_token, out_dir, num_threads):
         logging.debug('%s new pins on this page', len(new_pins))
 
         if new_pins:
-            num_errors = 0
             with concurrent.futures.ThreadPoolExecutor(
                     num_threads) as executor:
                 future_to_pin = {}
@@ -343,15 +342,10 @@ def download_board(board, access_token, out_dir, num_threads):
 
                     e = future.exception()
                     if e is not None:
-                        logging.error(e)
-                        num_errors += 1
-
-            if num_errors > 0:
-                logging.error(
-                    'The page was not downloaded completely: '
-                    '%s pins left to download. Please try again later.',
-                    num_errors)
-                return
+                        if isinstance(e, HTTPError):
+                            logging.error('%s', e)
+                        else:
+                            raise e
 
         if cursor is not None:
             page_info = {
