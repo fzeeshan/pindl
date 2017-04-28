@@ -37,7 +37,7 @@ import zlib
 import json
 
 
-VERSION = '1.1.0'
+VERSION = '1.1.1'
 
 
 API = 'https://api.pinterest.com/v1/'
