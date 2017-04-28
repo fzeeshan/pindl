@@ -210,8 +210,20 @@ def iter_board_pages(board, access_token, page_cursor=None):
 
 def download_pin(pin, path):
     image_url = pin['image']['original']['url']
-    with urllib.request.urlopen(image_url) as response:
-        image_data = response.read()
+    try:
+        with urllib.request.urlopen(image_url) as response:
+            image_data = response.read()
+    except HTTPError as e:
+        # Sometimes an URL has .jpg extension while the image is
+        # actually PNG, resulting in 403 error.
+        base, ext = os.path.splitext(image_url)
+        if ext not in ('.jpg', '.jpeg'):
+            raise
+
+        image_url = base + '.png'
+        with urllib.request.urlopen(image_url) as response:
+            image_data = response.read()
+        logging.debug('URL extension corrected from %s to .png', ext)
 
     image_ext = os.path.splitext(image_url)[1]
 
